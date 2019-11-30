@@ -7,3 +7,7 @@ In the file you can find the code to make an arduino buzz after you knock in the
 
 ### 3) Joystick_4Digit-7Segment
 The file contains the code for a 4 Digit 7 Segments that is controlled by a joystick. There are 2 modes, the DigitChange and the ValueChange. To swap the modes, you have to press the joystick push-button.
+
+### 4) Menu
+This homework presents a menu for a waiting game. To toggle between options, we use the X Axis and to select, we use the other Axis. You can change the level, see the highscore and after the game is over, you receive a message. To go back to the menu, you have to press the SW button.
+Link: https://www.youtube.com/watch?v=mhaXJflpsy4
