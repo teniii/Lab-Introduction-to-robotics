@@ -12,7 +12,7 @@ You have two levels of difficulty, easy and hard. For the adventurers that
 try the hard mode, it will be a timer involved and a buzzer that will put 
 them under pressure.
 Depending on the level, the score will be calculated accordingly. 
-In the menu you can start the game, end it,see general info, see the highscore
+In the menu you can start the game, end it, see general info, see the highscore
 and settings.
 
 
