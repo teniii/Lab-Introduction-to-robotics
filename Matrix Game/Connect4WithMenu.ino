@@ -3,6 +3,11 @@
 #include <EEPROM.h>
 LedControl lc = LedControl(12, 11, 10, 1);
 const int pinX1 = A0, pinY1 = A1, pinX2 = A2, pinY2 = A3;
+const int pinBuzzer = 6;
+int buzzerTone = 2000;
+int buzzerPeriod = 4000;
+int buzzerDelay = 50;
+int timeLeft = 9000;
 
 int memoryAddress = 0;
 int pos1 = 0, pos2 = 0;
@@ -16,15 +21,17 @@ bool joyMovedY = false;
 int minThreshold = 300;
 int maxThreshold = 700;
 
-int level = 1;
+
 int brightnessLevel = 1;
 long lastUpdate = 0;
 long scorePlayer1 = 0, scorePlayer2 = 0, highScore = 0, score = 0;
 int i = 0;
-int x1Win = 0, y1Win = 0, x2Win = 3, y2Win = 3; //the coordinates of the winning move (start + end)
+int x1Win = 1, y1Win = 4, x2Win = 4, y2Win = 7; //the coordinates of the winning move (start + end)
 
 bool difficulty = false;
 unsigned long startPulsing = 0;
+
+
 
 int matrix[8][8] = {
   {0, 0, 0, 0, 0, 0, 0, 0},
@@ -76,15 +83,19 @@ void setup()
       lc.setLed(0, row, col, matrix[row][col]);
     }
   }
-  //welcome();
-  highScore = EEPROM.read(memoryAddress);
+  welcome();
+  highScore = EEPROM.read(memoryAddress); //we take the highscore from the EEPROM
 }
+
+
+
+
 
 
 void welcome()
 {
-  long startWelcoming = millis();
-  while ( millis() - startWelcoming < 5000) {
+  unsigned long startWelcoming = millis();
+  while ( millis() - startWelcoming < 5000) { //this is the message that will welcome the players for 5 seconds
     lcd.setCursor(0, 0);
     lcd.print("Welcome to the");
     lcd.setCursor(0, 1);
@@ -93,16 +104,28 @@ void welcome()
   lcd.clear();
 }
 
-void showCongrats()
-{
 
-  long startCongr = millis();
-  //lcd.clear();
+
+
+
+void showWinningMove();
+
+void showCongrats() {
+
+  noTone(pinBuzzer); //we stop the buzzer if the game is in hard mode
+  unsigned long startCongr = millis();
+  joyMovedY = false;
+
+  for (int row = 0; row < 8; row++) {         //shuting down the matrix
+    for (int col = 0; col < 8; col++) {
+      lc.setLed(0, row, col, 0);
+    }
+  }
+
   while (joyMovedY == false) { //(y1Value <= maxThreshold && y1Value >= minThreshold){
 
     x1Value = analogRead(pinX1);
     y1Value = analogRead(pinY1);
-
 
     if ((millis() - startCongr) % 6000 < 3000) { //we are showing alternatively the messages
       lcd.setCursor(0, 0);
@@ -115,76 +138,65 @@ void showCongrats()
       lcd.print("you won!             ");
     }
 
-    if ((millis() - startCongr) % 6000 > 3000)
-    {
+    if ((millis() - startCongr) % 6000 > 3000) {
 
       lcd.setCursor(0, 0);
-      lcd.print("Move joystick up       ");
+      lcd.print("P1,move joystick       ");
       lcd.setCursor(0, 1);
-      lcd.print("or down to exit!            ");
+      lcd.print("up to continue!            ");
+
     }
 
-    if (y1Value > maxThreshold || y1Value < minThreshold) {
-      joyMovedY = true;
+
+
+
+
+    if (x1Win == x2Win) {
+      for (int i = min(y1Win, y2Win); i <= max(y1Win, y2Win); i++)
+        lc.setLed(0, x1Win, i, 1);
+    }
+    else if (y1Win == y2Win) {
+      for (int i = min(x1Win, x2Win); i <= max(x1Win, x2Win); i++)
+        lc.setLed(0, i, y1Win, 1);
+    }
+    else
+    {
+      if (y2Win - y1Win == x2Win - x1Win) { //diag1 (/)
+        int j = min(y1Win, y2Win);
+        for (int i = min(x1Win, x2Win); i <= max(x1Win, x2Win) && j <= max(y1Win, y2Win); i++, j++)
+          lc.setLed(0, i, j, 1);
+      }
+      else { //diag 2 (\)
+        int j = min(y1Win, y2Win);
+        for (int i = max(x1Win, x2Win); i >= min(x1Win, x2Win) && j <= max(y1Win, y2Win); i--, j++)
+          lc.setLed(0, i, j, 1);
+      }
+    }
+
+    if ((y1Value > maxThreshold || y1Value < minThreshold) && millis() - startCongr > 1000) {
       lcd.clear();
+      joyMovedY = true;
+
+      for (int row = 0; row < 8; row++) {         //shuting down the matrix
+        for (int col = 0; col < 8; col++) {
+          lc.setLed(0, row, col, 0);
+        }
+      }
       return;
     }
   }
 
 }
 
-void startGame() {
-
-  x1Value = analogRead(pinX1);
-  y1Value = analogRead(pinY1);
 
 
-  long start = millis();
-  score = level * 3;
-  lastUpdate = start;
-  //lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Lives:3");
-  lcd.setCursor(9, 0);
-  lcd.print("Lvl:");
-  lcd.setCursor(13, 0);
-  lcd.print(level);
-  lcd.setCursor(3, 1);
-  lcd.print("Score:");
-  lcd.setCursor(9, 1);
-  lcd.print(score);
 
 
-  while (millis() - start < 10000) {
+void high() { //the highscore menu
 
-    lcd.setCursor(0, 0);
-    lcd.print("Lives:3");
-    lcd.setCursor(9, 0);
-    lcd.print("Lvl:");
-    lcd.setCursor(13, 0);
-    lcd.print(level);
-    lcd.setCursor(3, 1);
-    lcd.print("Score:");
-    lcd.setCursor(9, 1);
-    lcd.print(score);
-
-    if (millis() - lastUpdate > 2000) { //we update the score and the level
-      level++;
-      score = 3 * level;
-      lastUpdate = millis();
-    }
-  }
-  showCongrats();
-  if (score > highScore)
-    highScore = score;
-  return;
-
-}
-
-void high() {
   joyMovedY = false;
 
-  long startH = millis();
+  unsigned long startH = millis();
   while ( joyMovedY == false) {
 
     y1Value = analogRead(pinY1);
@@ -202,16 +214,21 @@ void high() {
 
 }
 
-void setDifficulty()
-{
+
+
+
+
+
+void setDifficulty() {
   joyMovedY = false;
-  long startS = millis();
+
+  unsigned long startS = millis();
   lcd.clear();
   while ( joyMovedY == false) {
     x1Value = analogRead(pinX1);
     y1Value = analogRead(pinY1);
-    lcd.setCursor(0, 0);
-    lcd.print("Level:");
+    lcd.setCursor(3, 0);
+    lcd.print("Difficulty:");
 
 
     if (x1Value > maxThreshold && joyMovedX == false) {
@@ -219,11 +236,11 @@ void setDifficulty()
       joyMovedX = true;
     }
     else if (x1Value < minThreshold && joyMovedX == false) {
-      difficulty = !difficulty;
+      difficulty = !difficulty;//if the joystick is used with X axis, the difficulty changes
       joyMovedX = true;
     }
 
-    lcd.setCursor(7, 0);
+    lcd.setCursor(6, 1);
 
     if (difficulty)
       lcd.print("Hard    ");
@@ -234,17 +251,20 @@ void setDifficulty()
       joyMovedX = false;
 
     if ((y1Value > maxThreshold || y1Value < minThreshold) && millis() - startS > 500) {
-      joyMovedY = true;
+      joyMovedY = true; //for exiting from the menu
       lcd.clear();
       return;
     }
   }
 }
 
-void setMatrixBrightness()
-{
+
+
+
+void setMatrixBrightness() {
+
   joyMovedY = false;
-  long startB = millis();
+  unsigned long startB = millis();
   lcd.clear();
   while ( joyMovedY == false) {
     x1Value = analogRead(pinX1);
@@ -259,14 +279,12 @@ void setMatrixBrightness()
       lcd.print(" ");
     }
 
-    for (int row = 0; row < 8; row++)
-    {
-      for (int col = 0; col < 8; col++)
-      {
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
         lc.setLed(0, row, col, 1);
       }
     }
-
+    //depending on which side of the X axis the joystick is moved, the brightness changes
     if (x1Value < minThreshold && joyMovedX == false) {
       brightnessLevel++;
       if (brightnessLevel > 15)
@@ -282,19 +300,17 @@ void setMatrixBrightness()
       joyMovedX = true;
     }
 
-    //lcd.setCursor(11,0);
-    // lcd.print(brightnessLevel);
-
 
     if (x1Value <= maxThreshold && x1Value >= minThreshold)
       joyMovedX = false;
 
+    //if the Y axis is used and it passed half of second since we've entered this menu
+    //we exit, but not before we let everything clean (the matrix and the lcd (the code can't be cleaner than this, sorry :( ))
+
     if ((y1Value > maxThreshold || y1Value < minThreshold) && millis() - startB > 500) {
       joyMovedY = true;
-      for (int row = 0; row < 8; row++)
-      {
-        for (int col = 0; col < 8; col++)
-        {
+      for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
           lc.setLed(0, row, col, 0);
         }
       }
@@ -304,15 +320,18 @@ void setMatrixBrightness()
   }
 }
 
-void settings()
-{
+
+
+
+
+void settings() {
 
   joyMovedY = false;
   bool  joyMovedUp = false;
-  long startS = millis();
-  bool arrow = false;
+  unsigned long startS = millis();
+  bool arrow = false; //the positon of the arrow. It's a boolean because there are
+  //only 2 positions possible
 
-  //int posR[4] = {0, 6, 0, 10}, posC[4] = {0, 0, 1, 1}; //the positions where the arrow can be
   while (joyMovedUp == false) {
     x1Value = analogRead(pinX1);
     y1Value = analogRead(pinY1);
@@ -325,6 +344,8 @@ void settings()
     //dau in jos -> e mai mare
     lcd.setCursor(0, arrow);
     lcd.print(">");
+
+    //if the X axis is used, the arrow changes
 
     if (x1Value > maxThreshold && joyMovedX == false) {
 
@@ -349,10 +370,13 @@ void settings()
 
       joyMovedX = true;
     }
-    //Serial.println(y1Value);
+
+
     if (x1Value >= minThreshold && x1Value <= maxThreshold) {
       joyMovedX = false;
     }
+
+    //if the Y axis is used in the DOWN motion, the arrow-indicated function will be called
 
     if ((y1Value > maxThreshold ) && millis() - startS > 500 && joyMovedY == false) {
       if (arrow == false) {
@@ -371,6 +395,9 @@ void settings()
       joyMovedUp = false;
       //lcd.clear();
     }
+
+    //if the Y axis is used in the UP motion, it will go back to the mainMenu
+
     if (y1Value < minThreshold && joyMovedY == false) {
       joyMovedY = true;
       joyMovedUp = true;
@@ -379,13 +406,17 @@ void settings()
   }
 }
 
+
+
+//////////////////////////////////to be continued
+
 void info()
 {
 
   joyMovedY = false;
   lcd.clear();
 
-  long startInfo = millis();
+  unsigned long startInfo = millis();
 
   while ( joyMovedY == false) {
 
@@ -415,8 +446,14 @@ void info()
     }
   }
 
-
 }
+
+
+
+
+
+
+void game();
 
 void mainMenu() {
   lcd.setCursor(1, 0);
@@ -506,11 +543,20 @@ void mainMenu() {
 
 void showWinningMove()
 {
+
   for (int row = 0; row < 8; row++) {         //shuting down the matrix
     for (int col = 0; col < 8; col++) {
       lc.setLed(0, row, col, 0);
     }
   }
+
+
+  unsigned long startWin = millis();
+  y1Value = analogRead(pinY1);
+  y2Value = analogRead(pinY2);
+  //while ( millis() - startWin > 500 && y1Value >= minThreshold && y1Value <= maxThreshold && y1Value >= minThreshold && y1Value <= maxThreshold){
+  y1Value = analogRead(pinY1);
+  y2Value = analogRead(pinY2);
   if (x1Win == x2Win) {
     for (int i = min(y1Win, y2Win); i <= max(y1Win, y2Win); i++)
       lc.setLed(0, x1Win, i, 1);
@@ -521,7 +567,7 @@ void showWinningMove()
   }
   else
   {
-    if (y2Win - y1Win == x2Win - x1Win) { //diag /
+    if (y2Win - y1Win == x2Win - x1Win) { //diag1 (/)
       int j = min(y1Win, y2Win);
       for (int i = min(x1Win, x2Win); i <= max(x1Win, x2Win) && j <= max(y1Win, y2Win); i++, j++)
         lc.setLed(0, i, j, 1);
@@ -532,8 +578,6 @@ void showWinningMove()
         lc.setLed(0, i, j, 1);
     }
   }
-
-  showCongrats();
 
 }
 
@@ -556,20 +600,18 @@ bool check(int b) {
 
 
 
-
-
   //check for horizontal(-)
   for (iH = b - 1; matrix[a][iH] == player && iH >= 0; iH--, horizontal++); //Check left
   iH++;
   for (iH = b + 1; matrix[a][iH] == player && iH <= 7; iH++, horizontal++); //Check right
   iH--;
-  //Serial.println(horizontal);
+
   if (horizontal >= 4) {
     x1Win = a;
     y1Win = b;
     x2Win = a;
     y2Win = iH;
-    //showWinningMove(a, b, a, iH);
+
     return true;
   }
 
@@ -578,13 +620,13 @@ bool check(int b) {
   iV++, iH++;
   for (iV = a + 1, iH = b + 1; matrix[iV][iH] == player && iV <= 6 && iH <= 7; diagonal1++, iV ++, iH ++); //down and right
   iV--, iH--;
-  //Serial.println(diagonal1);
+
   if (diagonal1 >= 4) {
     x1Win = a;
     y1Win = b;
     x2Win = iV;
     y2Win = iH;
-    //showWinningMove(a, b, iV, iH);
+
     return true;
   }
 
@@ -598,39 +640,85 @@ bool check(int b) {
     y1Win = b;
     x2Win = iV;
     y2Win = iH;
-    //showWinningMove(a, b, iV, iH);
+
     return true;
   }
 
-  if (a == 0) player = -1;
+  if (a == 0) player = -1; //for the vertical case we have to put another value in the player variable
 
   //check for vertical(|)
   for (iV = a - 1; matrix[iV][b] == player && iV >= 0; iV--, vertical++); //Check up
   iV++; //the last i that checked the conditions before exiting the for
   for (iV = a + 1; matrix[iV][b] == player && iV <= 6; iV++, vertical++); //Check down
   iV--; //the last i that checked the conditions before exiting the for
-  Serial.println(vertical);
+
   if (vertical >= 4) {
     x1Win = a;
     y1Win = b;
     x2Win = iV;
     y2Win = b;
-    //showWinningMove(a, b, iV, b);
 
     return true;
   }
-
 
   return false;
 }
 
 
 
-void game()
-{
+
+void endOfGame() {
+
+
+  unsigned long startEnd = millis();
+  lcd.clear();
+  while (joyMovedY == false) { //(y1Value <= maxThreshold && y1Value >= minThreshold){
+
+    x1Value = analogRead(pinX1);
+    y1Value = analogRead(pinY1);
+
+
+    if (scorePlayer2 == scorePlayer1) {
+
+
+      lcd.setCursor(0, 0);
+      lcd.print("WOW! IT'S A TIE!    ");
+      lcd.setCursor(0, 1);
+      lcd.print("                       ");
+    }
+    else {
+      lcd.setCursor(0, 0);
+      lcd.print("THE BIG WINNER:    ");
+      lcd.setCursor(2, 1);
+      if (scorePlayer1 > scorePlayer2)
+        lcd.print("PLAYER1!!!");
+      if (scorePlayer1 < scorePlayer2)
+        lcd.print("PLAYER1!!!");
+    }
+    delay(3000);
+    if ((y2Value > maxThreshold || y2Value < minThreshold) && millis() - startEnd > 1000) {
+      lcd.clear();
+      joyMovedY = true;
+      return;
+    }
+  }
+
+}
+
+
+
+
+
+
+
+
+void game() {
+
   unsigned long startGame = millis();
+  unsigned long startTurn = millis();
+  unsigned long timeLcdDecrement = millis();
+
   int numberOfGames = 0;
-  y1Value = analogRead(pinY1);
 
   for (int row = 0; row < 7; row++) {
     for (int col = 0; col < 8; col++) {
@@ -638,8 +726,8 @@ void game()
       lc.setLed(0, row, col, matrix[row][col]);
     }
   }
-
-  while (numberOfGames < 3) {
+  fullMatrix = false;
+  while (numberOfGames < 3 && fullMatrix == false) {
     x1Value = analogRead(pinX1);
     x2Value = analogRead(pinX2);
     y1Value = analogRead(pinY1);
@@ -672,7 +760,7 @@ void game()
         int startWait = millis();
         lc.setLed(0, 7, pos1, 0);
         int i;
-        for (i = 6; i > 0 && matrix[i - 1][pos1] == 0; ) {
+        for (i = 6; i > 0 && matrix[i - 1][pos1] == 0; ) { //the dropping effect
           lc.setLed(0, i, pos1, 1);
           if (millis() - startWait > 55) {
             lc.setLed(0, i, pos1, 0);
@@ -683,34 +771,37 @@ void game()
           }
         }
         if (matrix[6][pos1] == 0) {
-          matrix[i][pos1] = 1;
+          matrix[i][pos1] = 1;   //the turn will change if the collumn isn't full
           turn = 1;
-
+          startTurn = millis();
+          timeLeft = 9000;
+          noTone(pinBuzzer);
         }
         else
-          turn = 0;
+          turn = 0; //if the collumn is full, the turn won't change
 
-        if (check(pos1)) {
-          numberOfGames++;
+        if (check(pos1)) { //if this was a winning move
+          numberOfGames++; //the score and the no of games updates
           scorePlayer1++;
-          showWinningMove();
-          //if ((scorePlayer1 + 1) % 2 == 0 && scorePlayer1 == max(scorePlayer1 + 1, scorePlayer2)) {
-          //mainMenu();
-          //scorePlayer1++;
-          lcd.clear();
-          // numberOfGames++;
-          //}
-          //else { //stergere matrice
-          //scorePlayer1++;
+          //showWinningMove();
+
+          showCongrats();   //showing the congrats message
+
 
           for (int row = 0; row < 7; row++) {
             for (int col = 0; col < 8; col++) {
               matrix[row][col] = 0;
-              lc.setLed(0, row, col, matrix[row][col]);
+              lc.setLed(0, row, col, matrix[row][col]); //reseting the matrix
             }
           }
+
+          if (scorePlayer1 > highScore) { ///checking for highscore
+            highScore = scorePlayer1;
+            EEPROM.write(memoryAddress, highScore);
+          }
+          //lcd.clear();
         }
-        //}
+
 
         joyMoved = true;
       }
@@ -740,7 +831,6 @@ void game()
 
         int startWait = millis();
         lc.setLed(0, 7, pos2, 0);
-        //if(
         int i;
         for (i = 6; i > 0 && matrix[i - 1][pos2] == 0; ) {
           lc.setLed(0, i, pos2, 0);
@@ -749,31 +839,24 @@ void game()
             i--;
             lc.setLed(0, i, pos2, 1);
             startWait = millis();
-
           }
         }
         if (matrix[6][pos2] == 0) {
           matrix[i][pos2] = 2;
           turn = 0;
-
+          startTurn = millis();
+          timeLeft = 9000;
+          noTone(pinBuzzer);
         }
         else
           turn = 1;
-
         joyMoved = true;
 
         if (check(pos2)) {
-          showWinningMove();
+          //showWinningMove();
+          showCongrats();
           scorePlayer2++;
           numberOfGames++;
-          //if ((scorePlayer2 + 1) % 2 == 0 && scorePlayer2 == max(scorePlayer1, scorePlayer2 + 1)) {
-
-          //scorePlayer2++;
-          lcd.clear();
-          //return;
-          //}
-          //else { //stergere matrice
-          //scorePlayer2++;
 
           for (int row = 0; row < 7; row++) {
             for (int col = 0; col < 8; col++) {
@@ -781,14 +864,13 @@ void game()
               lc.setLed(0, row, col, matrix[row][col]);
             }
           }
+
+          if (scorePlayer2 > highScore) {
+            highScore = scorePlayer2;
+            EEPROM.write(memoryAddress, highScore);
+          }
+
         }
-        //}
-
-
-        //Serial.println(check(pos2));
-        //return;
-
-
       }
 
       if (x2Value <= 600 && x2Value >= 400)// && yValue >= 400)
@@ -798,11 +880,14 @@ void game()
     lcd.print("P1");
     lcd.setCursor(14, 0);
     lcd.print("P2");
-    lcd.setCursor(6, 0);
-    if (difficulty)
-      lcd.print("Hard");
+    lcd.setCursor(5, 0);
+    if (difficulty) {
+      lcd.print("Hard:");
+
+      lcd.print(timeLeft / 1000);
+    }
     else
-      lcd.print("Easy");
+      lcd.print(" Easy");
     lcd.setCursor(6, 1);
     lcd.print(scorePlayer1);
     lcd.print("--");
@@ -823,14 +908,14 @@ void game()
 
     unsigned long currentTime = millis();
     bool change = false;
-    for (int row = 0; row < 8; row++)
-    {
-      for (int col = 0; col < 8; col++)
-      {
-        if (matrix[row][col] == 1) {
 
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+
+        if (matrix[row][col] == 1) {
           lc.setLed(0, row, col, matrix[row][col]);
         }
+
         if (matrix[row][col] == 2) {
           if (currentTime - startPulsing > 100) {
             change = true;
@@ -846,16 +931,102 @@ void game()
       startPulsing = millis();
     }
 
+
+    if (difficulty) {
+      /*
+        int buzzerTone = 2000;
+        int buzzerPeriod = 4000;
+        int buzzerDelay = 500;
+        int timeLeft = 9000;
+      */
+
+      if (millis() - startTurn > 7000) {
+        tone(pinBuzzer, buzzerTone, buzzerDelay);
+        buzzerDelay /= 2;
+        buzzerPeriod /= 2;
+        buzzerDelay /= 2;
+      }
+      if (millis() - timeLcdDecrement  > 1000) { //every second, the timer will decrease by 1
+        timeLeft -= 1000;
+        lcd.setCursor(10, 0);
+        lcd.print(timeLeft / 1000);
+        timeLcdDecrement = millis();
+      }
+
+      if (timeLeft / 1000 < 1) { //if the timer is 0, we make the move automatically
+        int i, pos = -1, posValue = 0, scorePlayer;
+        if (turn == 0) {
+          pos = pos1;
+          posValue = 1;
+          scorePlayer = scorePlayer1;
+        }
+        if (turn == 1) {
+          pos = pos2;
+          posValue = 2;
+        }
+
+        int startWait = millis();
+        lc.setLed(0, 7, pos, 0);
+
+
+        for (i = 6; i > 0 && matrix[i - 1][pos] == 0; ) { //the dropping effect
+          lc.setLed(0, i, pos, 1);
+          if (millis() - startWait > 55) {
+            lc.setLed(0, i, pos, 0);
+            i--;
+            lc.setLed(0, i, pos, 1);
+            startWait = millis();
+
+          }
+        }
+        matrix[i][pos] = posValue;
+        turn = !turn;
+
+        if (check(pos)) { //if this was a winning move
+          numberOfGames++; //the score and the no of games updates
+          if (pos == pos1)
+            scorePlayer1++;
+          else
+            scorePlayer2++;
+          showWinningMove();
+          //showCongrats();   //showing the congrats message
+
+
+          for (int row = 0; row < 7; row++) {
+            for (int col = 0; col < 8; col++) {
+              matrix[row][col] = 0;
+              lc.setLed(0, row, col, matrix[row][col]); //reseting the matrix
+            }
+          }
+
+          if (scorePlayer1 > highScore) { ///checking for highscore
+            highScore = scorePlayer1;
+            EEPROM.write(memoryAddress, highScore);
+          }
+
+          if (scorePlayer2 > highScore) { ///checking for highscore
+            highScore = scorePlayer2;
+            EEPROM.write(memoryAddress, highScore);
+          }
+        }
+
+        timeLeft = 9000; //we reset the timer, we change the turn and deactivate the buzzer
+        startTurn = millis();
+        noTone(pinBuzzer);
+
+      }
+    }
   }
+  //endOfGame();
+  lcd.clear();
 }
+
+
+
+
 
 
 void loop()
 {
   mainMenu();
-  Serial.println(1);
-  //showWinningMove();
-
-  //game();
-  //welcome();
 }
