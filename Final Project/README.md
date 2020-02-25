@@ -10,6 +10,8 @@ Inside the box you can find a breadboard with a condenser and a buzzer, the ardu
 
 ### Images
 ![Image from the front](https://web.500px.com/photo/1011351437/SafeBox-by-Alexandru-Tenita/)
+![The interior](https://web.500px.com/photo/1011351438/SafeBox-by-Alexandru-Tenita/)
+![The top](https://web.500px.com/photo/1011351439/SafeBox-by-Alexandru-Tenita/)
 
 ### Links
 ##### Youtube:
