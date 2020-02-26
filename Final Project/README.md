@@ -9,9 +9,9 @@ Once opened, you can acces the valuable things inside of it. After the robotics 
 Inside the box you can find a breadboard with a condenser and a buzzer, the arduino and a servo, leaving all the other space for storage. The locking system is a pretty simple one: we have on the top a servo and o the side near the servo an L-shaped metal piece. Once the box is closed and we are locking it, the propeller of the motor is blocked by the metal piece to go up. 
 
 ### Images
-![Image from the front](https://web.500px.com/photo/1011351437/SafeBox-by-Alexandru-Tenita/)
-![The interior](https://web.500px.com/photo/1011351438/SafeBox-by-Alexandru-Tenita/)
-![The top](https://web.500px.com/photo/1011351439/SafeBox-by-Alexandru-Tenita/)
+![Image from the front](https://github.com/teniii/Lab-Introduction-to-robotics/blob/master/Final%20Project/The%20front.jpeg?raw=true)
+![The interior](https://github.com/teniii/Lab-Introduction-to-robotics/blob/master/Final%20Project/The%20interior.jpeg?raw=true)
+![The top](https://github.com/teniii/Lab-Introduction-to-robotics/blob/master/Final%20Project/The%20top.jpeg?raw=true)
 
 ### Links
 ##### Youtube:
